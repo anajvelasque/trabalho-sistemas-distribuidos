@@ -27,6 +27,14 @@ Inicialmente, o sistema utiliza memória compartilhada para o gerenciamento de d
 
 ---
 
+## Desenvolvedores
+
+- Ana Julia Velasque Rodrigues
+- Rafael Augusto de Souza 
+- Yasmim Augusta Gomes Teixeira
+
+---
+
 ## Estrutura do Projeto
 
 - `cliente.py`: Implementação do cliente FTP, responsável por interagir com o servidor.
