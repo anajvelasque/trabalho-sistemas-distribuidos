@@ -54,18 +54,23 @@ Inicialmente, o sistema utiliza memória compartilhada para o gerenciamento de d
    ```bash
    cd <nome-do-diretorio>
    ```
-
-3. Inicie o servidor FTP:
+3. Instale essas bibliotecas se necessário:
+   ```bash
+   pip install tqdm pyftpdlib
+   ou
+   python3.13 -m pip install tqdm pyftpdlib
+   ```
+4. Inicie o servidor FTP:
    ```bash
    python servidor_ftp.py
    ```
 
-4. Em outro terminal, inicie o cliente FTP:
+5. Em outro terminal, inicie o cliente FTP:
    ```bash
    python cliente.py
    ```
 
-5. Utilize o cliente para realizar as operações de upload, download e listagem de arquivos.
+6. Utilize o cliente para realizar as operações de upload, download e listagem de arquivos.
 
 ---
 
