@@ -14,7 +14,7 @@ def iniciar_servidor_ftp():
     handler.authorizer = authorizer
     
     # Define o IP e a porta do servidor FTP
-    endereco_servidor = ('0.0.0.0', 21)  # Ou use '127.0.0.1' para localhost
+    endereco_servidor = ('0.0.0.0', 21)  # Endereço IP local *ALTERAR PARA O IP DO SERVIDOR*
     servidor = FTPServer(endereco_servidor, handler)
     
     print("Servidor FTP está em execução...")
