@@ -1,0 +1,151 @@
+from ftplib import FTP
+import os
+from tqdm import tqdm
+
+def conectar_ftp(ip_servidor, usuario_ftp, senha_ftp):
+    """Estabelece uma conexão com o servidor FTP."""
+    try:
+        ftp = FTP(ip_servidor)
+        ftp.login(user=usuario_ftp, passwd=senha_ftp)
+        print("Conexão com o servidor FTP estabelecida com sucesso.")
+        return ftp
+    except Exception as e:
+        print(f"Erro ao conectar ao servidor FTP: {e}")
+        return None
+
+def fazer_upload(ftp):
+    """Realiza o upload de um arquivo ou diretório para o servidor FTP."""
+    caminho_arquivo = input("\nDigite o caminho completo do arquivo ou diretório que deseja enviar: ").strip().strip('"')
+
+    if not os.path.exists(caminho_arquivo):
+        print("Arquivo ou diretório não encontrado. Verifique o caminho e tente novamente.")
+        return
+
+    # Pergunta onde deseja salvar o arquivo ou diretório no servidor FTP
+    caminho_destino = escolher_destino(ftp, caminho_arquivo)
+
+    if os.path.isdir(caminho_arquivo):
+        # Se for um diretório, faz o upload de todos os arquivos dentro dele
+        upload_diretorio(ftp, caminho_arquivo, caminho_destino)
+    elif os.path.isfile(caminho_arquivo):
+        # Se for um arquivo, faz o upload normalmente
+        nome_arquivo = os.path.basename(caminho_arquivo)
+        try:
+            with open(caminho_arquivo, 'rb') as arquivo:
+                tamanho_total = os.path.getsize(caminho_arquivo)
+                with tqdm(total=tamanho_total, unit="B", unit_scale=True, desc=nome_arquivo) as barra:
+                    ftp.storbinary(f'STOR {caminho_destino}/{nome_arquivo}', arquivo, callback=lambda data: barra.update(len(data)))
+            print(f"Arquivo '{nome_arquivo}' enviado com sucesso para o servidor FTP.")
+        except Exception as e:
+            print(f"Erro ao enviar o arquivo: {e}")
+
+def upload_diretorio(ftp, caminho_diretorio, caminho_destino):
+    """Realiza o upload de todos os arquivos de um diretório e cria os diretórios no servidor FTP."""
+    for raiz, dirs, arquivos in os.walk(caminho_diretorio):
+        # Criar diretórios no servidor FTP
+        for dir_nome in dirs:
+            caminho_ftp = os.path.join(caminho_destino, os.path.relpath(os.path.join(raiz, dir_nome), caminho_diretorio)).replace(os.sep, '/')
+            try:
+                ftp.mkd(caminho_ftp)
+                print(f"Diretório '{caminho_ftp}' criado no servidor.")
+            except Exception:
+                # Se o diretório já existir, o erro será ignorado
+                pass
+
+        # Fazer o upload dos arquivos
+        for nome_arquivo in arquivos:
+            caminho_arquivo_local = os.path.join(raiz, nome_arquivo)
+            caminho_ftp_arquivo = os.path.join(caminho_destino, os.path.relpath(os.path.join(raiz, nome_arquivo), caminho_diretorio)).replace(os.sep, '/')
+
+            try:
+                with open(caminho_arquivo_local, 'rb') as arquivo:
+                    tamanho_total = os.path.getsize(caminho_arquivo_local)
+                    with tqdm(total=tamanho_total, unit="B", unit_scale=True, desc=caminho_ftp_arquivo) as barra:
+                        ftp.storbinary(f'STOR {caminho_ftp_arquivo}', arquivo, callback=lambda data: barra.update(len(data)))
+                print(f"Arquivo '{caminho_ftp_arquivo}' enviado com sucesso para o servidor FTP.")
+            except Exception as e:
+                print(f"Erro ao enviar o arquivo '{nome_arquivo}': {e}")
+
+def escolher_destino(ftp, caminho_arquivo):
+    """Permite ao usuário escolher um diretório no servidor FTP onde deseja salvar o arquivo ou diretório."""
+    try:
+        diretorios = ftp.nlst()
+        diretorios = [d for d in diretorios if verificar_diretorio(ftp, d)]
+        
+        if not diretorios:
+            print("Não há diretórios disponíveis no servidor.")
+            return ""
+
+        print("Escolha o diretório onde deseja salvar o arquivo:")
+
+        # Iniciar navegação no diretório raiz
+        caminho_destino = navegar_diretorios(ftp, '/')
+
+        return caminho_destino
+
+    except Exception as e:
+        print(f"Erro ao acessar diretórios: {e}")
+        return ""
+
+def navegar_diretorios(ftp, caminho_atual):
+    """Permite ao usuário navegar entre diretórios e subdiretórios para escolher o destino de upload."""
+    while True:
+        print(f"\nDiretórios em '{caminho_atual}':")
+        try:
+            # Muda para o diretório atual
+            ftp.cwd(caminho_atual)
+            conteudo = ftp.nlst()
+            subdiretorios = [item for item in conteudo if verificar_diretorio(ftp, item)]
+            
+            # Exibir subdiretórios
+            for subdir in subdiretorios:
+                print(f"  [DIR] {subdir}")
+            
+            print(f"\nEscolha um diretório ou subdiretório para salvar:")
+            print("[X] - Voltar ao diretório raiz")
+            print("[P] - Voltar ao diretório pai")
+            print("[Enter] - Escolher este diretório")
+            
+            # Pedir para o usuário digitar o nome do diretório
+            escolha = input("\nDigite o nome do diretório ou opção desejada: ").strip()
+            
+            if escolha == 'X':
+                return "/"  # Voltar ao diretório raiz
+            elif escolha == 'P':
+                return caminho_atual.rsplit('/', 1)[0] if caminho_atual != '/' else '/'  # Voltar ao diretório pai
+            elif escolha:
+                if escolha in subdiretorios:
+                    # Se o nome do diretório escolhido estiver na lista de subdiretórios
+                    caminho_atual = f"{caminho_atual}/{escolha}" if caminho_atual != '/' else f"/{escolha}"
+                else:
+                    print("Diretório não encontrado. Tente novamente.")
+            else:
+                # Se não escolher nada, o diretório atual é o destino
+                return caminho_atual
+        except Exception as e:
+            print(f"Erro ao acessar diretório: {e}")
+            return caminho_atual
+
+def verificar_diretorio(ftp, nome_item):
+    """Verifica se o item é um diretório acessível."""
+    try:
+        ftp.cwd(nome_item)  # Tenta acessar como diretório
+        ftp.cwd('..')  # Volta ao diretório anterior
+        return True  # Se não der erro, é um diretório
+    except Exception:
+        return False  # Se ocorrer erro, não é um diretório
+
+def criar_diretorio(ftp):
+    """Cria um diretório no servidor FTP."""
+    nome_diretorio = input("\nDigite o nome do diretório que deseja criar no servidor: ").strip()
+    try:
+        ftp.mkd(nome_diretorio)
+        print(f"Diretório '{nome_diretorio}' criado com sucesso no servidor.")
+    except Exception as e:
+        print(f"Erro ao criar diretório: {e}")
+
+def desconectar_ftp(ftp):
+    """Finaliza a conexão com o servidor FTP."""
+    if ftp:
+        ftp.quit()
+        print("Conexão com o servidor FTP encerrada.")
