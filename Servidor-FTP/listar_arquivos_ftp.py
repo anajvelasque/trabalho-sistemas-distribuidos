@@ -1,56 +1,114 @@
 from ftplib import FTP
 
 def listar_arquivos_servidor(ftp):
-    """Lista arquivos e diretórios no servidor FTP de forma tabulada e recursiva."""
+    """Lista arquivos e diretórios no servidor FTP de forma tabulada e interativa, com opção de deletar."""
     try:
-        # Lista os arquivos e diretórios no diretório atual
-        arquivos = ftp.nlst()  
+        arquivos_para_deletar = []  # Lista para armazenar os arquivos e diretórios numerados
         print("\nArquivos e diretórios disponíveis no servidor:\n")
         
-        if not arquivos:
-            print("Não há arquivos ou diretórios no servidor.")
+        listar_arquivos_completa(ftp, arquivos_para_deletar)
+
+        # Opção de deletar arquivo
+        print("\nSelecione 'D' para deletar um arquivo ou diretório.")
         
-        for nome_item in arquivos:
-            # Verifica se é um diretório
-            if verificar_diretorio(ftp, nome_item):
-                print(f"[DIR] {nome_item}")
-                listar_arquivos_subdiretorio(ftp, nome_item, nivel=1)  # Chama recursivamente para listar o conteúdo do diretório
-            else:
-                print(f"{nome_item}")
+        # Solicita ao usuário a opção de deletar um arquivo ou diretório
+        deletar = input("\nDigite 'D' para deletar ou qualquer outra tecla para sair: ").strip().lower()
+        
+        if deletar == 'd':
+            # Exibe a lista de arquivos e diretórios para deletar
+            try:
+                escolha = int(input("\nDigite o número correspondente ao item que deseja deletar: "))
+                if 1 <= escolha <= len(arquivos_para_deletar):
+                    item_escolhido = arquivos_para_deletar[escolha - 1]
+                    confirmar = input(f"Você tem certeza que deseja deletar '{item_escolhido}'? (s/n): ").strip().lower()
+                    if confirmar == 's':
+                        deletar_item(ftp, item_escolhido)
+            except ValueError:
+                print("Opção inválida. Nenhum item foi deletado.")
+        else:
+            print("Nenhum item será deletado.")
         
     except Exception as e:
         print(f"Erro ao listar arquivos: {e}")
 
-def verificar_diretorio(ftp, nome_item):
+def listar_arquivos_completa(ftp, arquivos_para_deletar, caminho_atual="", nivel=0, caminho_parent=""):
+    """Função recursiva para listar todos os arquivos e subdiretórios no servidor FTP com numeração contínua e estrutura hierárquica."""
+    try:
+        arquivos = ftp.nlst(caminho_atual)  # Lista os arquivos e diretórios no caminho atual
+        
+        if not arquivos:
+            return
+        
+        for i, nome_item in enumerate(arquivos):
+            # Monta o caminho completo
+            caminho_completo = f"{caminho_atual}/{nome_item}" if caminho_atual else nome_item
+            caminho_exibicao = f"{caminho_parent}/{nome_item}" if caminho_parent else nome_item
+            
+            # Verifica se é um diretório
+            if verificar_diretorio(ftp, caminho_completo):
+                print(f"{len(arquivos_para_deletar) + 1}. [sub]{caminho_exibicao}")  # Indenta e marca como subdiretório
+                arquivos_para_deletar.append(caminho_completo)  # Adiciona o diretório à lista para deletar
+                listar_arquivos_completa(ftp, arquivos_para_deletar, caminho_completo, nivel + 1, caminho_exibicao)  # Chama recursivamente para listar o conteúdo
+            else:
+                print(f"{len(arquivos_para_deletar) + 1}. {caminho_exibicao}")  # Exibe o arquivo
+                arquivos_para_deletar.append(caminho_completo)  # Adiciona o arquivo à lista para deletar
+        
+    except Exception as e:
+        print(f"Erro ao acessar o diretório {caminho_atual}: {e}")
+
+def verificar_diretorio(ftp, caminho_item):
     """Verifica se o item é um diretório acessível."""
     try:
-        ftp.cwd(nome_item)  # Tenta acessar como diretório
+        ftp.cwd(caminho_item)  # Tenta acessar como diretório
         ftp.cwd('..')  # Volta ao diretório anterior
         return True  # Se não der erro, é um diretório
     except Exception:
         return False  # Se ocorrer erro, não é um diretório
 
-def listar_arquivos_subdiretorio(ftp, caminho_diretorio, nivel):
-    """Lista os arquivos e diretórios dentro de um subdiretório de forma recursiva e tabulada."""
+def deletar_item(ftp, item):
+    """Deleta um arquivo ou diretório no servidor FTP."""
     try:
-        # Acessa o subdiretório
-        ftp.cwd(caminho_diretorio)
-        arquivos_subdiretorio = ftp.nlst()  # Lista arquivos e diretórios no subdiretório
-        
-        if not arquivos_subdiretorio:
-            print(f"{'    ' * nivel}Não há arquivos ou subdiretórios em '{caminho_diretorio}'.")
-
-        # Indenta os arquivos e diretórios para mostrar a hierarquia
-        for nome_item in arquivos_subdiretorio:
-            # Verifica se é um diretório
-            if verificar_diretorio(ftp, nome_item):
-                print(f"{'    ' * nivel}[DIR] {nome_item}")  # Indenta os diretórios
-                listar_arquivos_subdiretorio(ftp, nome_item, nivel + 1)  # Chama recursivamente para listar o conteúdo
-            else:
-                print(f"{'    ' * nivel}{nome_item}")  # Indenta os arquivos
-        
-        ftp.cwd('..')  # Volta ao diretório anterior após a listagem do subdiretório
-
+        # Tenta verificar se o diretório está acessível antes de tentar deletá-lo
+        if verificar_diretorio(ftp, item):
+            # Se for um diretório, deletamos seu conteúdo recursivamente
+            deletar_diretorio(ftp, item)
+        else:
+            ftp.delete(item)  # Deleta o arquivo
+            print(f"Arquivo '{item}' deletado com sucesso.")
     except Exception as e:
-        print(f"Erro ao acessar o diretório {caminho_diretorio}: {e}")
-        ftp.cwd('..')  # Certifica-se de voltar ao diretório anterior após erro
+        # Se ocorrer erro na exclusão, exibe uma mensagem de erro
+        print(f"Erro ao deletar '{item}': {e}")
+
+def deletar_diretorio(ftp, diretório):
+    """Deleta um diretório no FTP e seu conteúdo de forma recursiva, com verificação adequada."""
+    try:
+        # Verifica se o diretório existe e está acessível
+        ftp.cwd(diretório)
+        arquivos = ftp.nlst()  # Lista os arquivos e subdiretórios no diretório
+        
+        if arquivos:
+            # Se o diretório não estiver vazio, deleta seus arquivos e subdiretórios
+            for arquivo in arquivos:
+                caminho_item = f"{diretório}/{arquivo}"
+                if verificar_diretorio(ftp, caminho_item):  # Se for diretório, chama recursão
+                    deletar_diretorio(ftp, caminho_item)
+                else:
+                    ftp.delete(caminho_item)  # Deleta o arquivo
+        
+        # Agora o diretório está vazio, então podemos tentar deletá-lo
+        ftp.cwd('..')  # Volta ao diretório anterior após deletar o conteúdo
+        ftp.rmd(diretório)  # Deleta o diretório vazio
+        print(f"Diretório '{diretório}' deletado com sucesso.")
+    except Exception as e:
+        # Se o diretório não for encontrado ou houver outro erro, exibe a mensagem
+        print(f"Erro ao deletar diretório '{diretório}': {e}")
+
+# Exemplo de uso
+if __name__ == "__main__":
+    ftp = FTP()
+    ftp.connect('ftp.servidor.com')  # Altere para o endereço do seu servidor FTP
+    ftp.login('usuario', 'senha')  # Altere para suas credenciais
+    
+    listar_arquivos_servidor(ftp)
+
+    ftp.quit()
