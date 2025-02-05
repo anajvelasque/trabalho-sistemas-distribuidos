@@ -8,7 +8,9 @@ def iniciar_servidor_ftp():
     authorizer = DummyAuthorizer()
     
     # Adiciona um usuário com permissões de leitura, escrita e listagem
-    caminho_diretorio = r'C:\Users\anajv\Downloads\ftp_sd'
+    caminho_diretorio = r'C:\Users\faela\Downloads\ftp sd'
+    #caminho_diretorio = r'C:\Users\anajv\Downloads\ftp_sd'
+
     if not os.path.exists(caminho_diretorio):
         os.makedirs(caminho_diretorio)
     
