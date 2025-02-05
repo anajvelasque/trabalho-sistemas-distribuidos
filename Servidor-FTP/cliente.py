@@ -201,6 +201,10 @@ async def apagar(ctx, nome_arquivo: str = None):
         if nome_arquivo is None:
             await ctx.send("**Erro**: Você precisa fornecer o nome do arquivo que deseja apagar.")
             return
+        arquivos = ftp.nlst()
+        if nome_arquivo not in arquivos:
+            await ctx.send("**Erro**: Arquivo nao encontrado no servidor FTP.")
+            return
         try:
             apagar_arquivo(ftp, nome_arquivo)
             await ctx.send(f"Arquivo '{nome_arquivo}' apagado com sucesso.")
