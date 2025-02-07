@@ -186,7 +186,7 @@ async def download(ctx, nome_arquivo: str):
         try:
             arquivos = ftp.nlst()
             if nome_arquivo not in arquivos:
-                await ctx.send("**Erro**: Arquivo nao encontrado no servidor FTP, logo não será baixado.")
+                await ctx.send("**Erro**: Arquivo nao encontrado no servidor FTP.")
                 return
             caminho_destino = download_arquivo(ftp, nome_arquivo)
             if caminho_destino:
