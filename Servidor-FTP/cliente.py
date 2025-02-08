@@ -3,139 +3,104 @@ import os
 import discord
 from discord.ext import commands
 
-# Configurações do servidor FTP
-ip_servidor = "127.0.0.1"  # Endereço IP do servidor FTP
-usuario_ftp = "usuario"
-senha_ftp = "senha123"
+# Configuração dos servidores FTP
+servidores_ftp = [
+    {"ip": "25.58.38.220", "usuario": "usuario1", "senha": "senha1"},
+    {"ip": "25.23.12.169", "usuario": "usuario2", "senha": "senha2"},
+]
 
-# Função para enviar erro com tratamento diferenciado
-async def enviar_erro(erro, ctx=None):
-    """Envia erros tanto para o console (CMD) quanto para o Discord."""
-    # Envia para o console (CMD)
-    print(f"Erro (CMD): {erro}")
-    
-    # Envia para o Discord, caso o contexto (ctx) seja fornecido
-    if ctx:
-        if isinstance(erro, ConnectionError):
-            mensagem_discord = f"**Erro de Conexão**: Não foi possível conectar ao servidor FTP. Verifique o endereço IP ou suas credenciais."
-        elif isinstance(erro, FileNotFoundError):
-            mensagem_discord = f"**Arquivo Não Encontrado**: O arquivo que você está tentando acessar não foi encontrado no servidor FTP."
-        elif isinstance(erro, PermissionError):
-            mensagem_discord = f"**Permissão Negada**: Não foi possível realizar a operação devido a falta de permissões."
-        elif isinstance(erro, ValueError):
-            mensagem_discord = f"**Argumento Inválido**: {erro}"
-        elif isinstance(erro, error_perm):
-            mensagem_discord = f"**Erro de Permissão FTP**: Problema ao acessar o arquivo no servidor FTP. Verifique as permissões."
-        else:
-            mensagem_discord = f"**Erro desconhecido**: {erro}"
-        await ctx.send(mensagem_discord)
-
-# Configurações do servidor FTP
-def conectar_ftp():
-    """Estabelece uma conexão com o servidor FTP."""
+# Função para conectar a um servidor FTP
+def conectar_ftp(servidor):
     try:
-        ftp = FTP(ip_servidor)
-        ftp.login(user=usuario_ftp, passwd=senha_ftp)
-        print("Conexão com o servidor FTP estabelecida com sucesso.")
+        ftp = FTP(servidor["ip"])
+        ftp.login(user=servidor["usuario"], passwd=servidor["senha"])
+        print(f"Conectado ao FTP: {servidor['ip']}")
         return ftp
     except Exception as e:
-        enviar_erro(e)  # Apenas no console
+        print(f"Erro ao conectar em {servidor['ip']}: {e}")
         return None
 
-ftp = conectar_ftp()
+# Criar conexões com os servidores disponíveis
+def conectar_todos_os_servidores():
+    return {srv["ip"]: conectar_ftp(srv) for srv in servidores_ftp if conectar_ftp(srv)}
 
-def renomear_arquivos(ftp):
-    """Renomeia arquivos removendo espaços e underscores do nome."""
-    try:
-        arquivos = ftp.nlst()
-        for arquivo in arquivos:
-            novo_nome = arquivo.replace(" ", "").replace("_", "")
-            if novo_nome != arquivo:
-                ftp.rename(arquivo, novo_nome)
-                print(f"Arquivo renomeado: {arquivo} -> {novo_nome}")
-    except Exception as e:
-        enviar_erro(e)  # Apenas no console
+conexoes_ftp = conectar_todos_os_servidores()
 
-# Função para listar arquivos no servidor FTP
-def listar_arquivos_servidor(ftp):
-    """Lista arquivos e diretórios no servidor FTP."""
-    if ftp is None:
-        enviar_erro("Conexão FTP não estabelecida.")
-        return []
-    try:
-        arquivos = ftp.nlst()
-        return arquivos
-    except Exception as e:
-        enviar_erro(e)  # Apenas no console
-        return []
+# Função para reconectar servidores offline
+def reconectar_servidores():
+    global conexoes_ftp
+    for ip, ftp in conexoes_ftp.items():
+        if ftp is None:
+            conexoes_ftp[ip] = conectar_ftp(next(srv for srv in servidores_ftp if srv["ip"] == ip))
+
+# Função para escolher o melhor servidor para upload
+def escolher_melhor_servidor():
+    menor_servidor = None
+    menor_qtd_arquivos = float('inf')
+    for ip, ftp in conexoes_ftp.items():
+        if ftp:
+            try:
+                qtd_arquivos = len(ftp.nlst())
+                if qtd_arquivos < menor_qtd_arquivos:
+                    menor_qtd_arquivos = qtd_arquivos
+                    menor_servidor = ftp
+            except Exception:
+                pass
+    return menor_servidor
+
+# Função para listar todos os arquivos nos servidores
+def listar_todos_os_arquivos():
+    arquivos_unificados = set()
+    for ftp in conexoes_ftp.values():
+        if ftp:
+            try:
+                arquivos_unificados.update(ftp.nlst())
+            except Exception:
+                pass
+    return list(arquivos_unificados)
 
 # Função para upload de arquivo
 def upload_arquivo(ftp, caminho_arquivo):
-    """Realiza o upload de um arquivo para o servidor FTP."""
     if ftp is None:
-        enviar_erro("Conexão FTP não estabelecida.")
+        print("Nenhum servidor FTP disponível para upload.")
         return
     try:
         nome_arquivo = os.path.basename(caminho_arquivo)
-        novo_nome = nome_arquivo.replace(" ", "").replace("_", "")
         with open(caminho_arquivo, 'rb') as arquivo:
-            ftp.storbinary(f'STOR {novo_nome}', arquivo)
-        print(f"Arquivo '{nome_arquivo}' enviado como '{novo_nome}' para o servidor FTP.")
-    except FileNotFoundError as e:
-        enviar_erro(f"Arquivo não encontrado: {e}", ftp)  # Envia erro específico para Discord
-    except PermissionError as e:
-        enviar_erro(f"Permissão negada ao acessar o arquivo: {e}", ftp)  # Envia erro de permissão para Discord
+            ftp.storbinary(f'STOR {nome_arquivo}', arquivo)
+        print(f"Arquivo '{nome_arquivo}' enviado para {ftp.host}")
     except Exception as e:
-        enviar_erro(e)  # Apenas no console
+        print(f"Erro ao enviar arquivo: {e}")
 
 # Função para download de arquivo
-def download_arquivo(ftp, nome_arquivo):
-    """Realiza o download de um arquivo do servidor FTP."""
-    if ftp is None:
-        enviar_erro("Conexão FTP não estabelecida.")
-        return None
-    try:
-        caminho_download = os.path.join(os.path.expanduser("~"), "Downloads", nome_arquivo)
-        diretorio_destino = os.path.dirname(caminho_download)
-        if not os.path.exists(diretorio_destino):
-            os.makedirs(diretorio_destino)
-        if not os.access(diretorio_destino, os.W_OK):
-            raise PermissionError(f"Sem permissão para gravar no diretório: {diretorio_destino}")
-        with open(caminho_download, 'wb') as arquivo_local:
-            ftp.retrbinary(f'RETR {nome_arquivo}', arquivo_local.write)
-        print(f"Arquivo '{nome_arquivo}' baixado com sucesso para: {caminho_download}")
-        return caminho_download
-    except FileNotFoundError as e:
-        enviar_erro(f"Arquivo não encontrado no servidor: {e}", ftp)  # Envia erro específico para Discord
-    except PermissionError as e:
-        enviar_erro(f"Permissão negada ao salvar o arquivo: {e}", ftp)  # Envia erro de permissão para Discord
-    except Exception as e:
-        enviar_erro(e)  # Apenas no console
+def download_arquivo(nome_arquivo):
+    for ftp in conexoes_ftp.values():
+        if ftp:
+            try:
+                caminho_download = os.path.join(os.path.expanduser("~"), "Downloads", nome_arquivo)
+                with open(caminho_download, 'wb') as arquivo_local:
+                    ftp.retrbinary(f'RETR {nome_arquivo}', arquivo_local.write)
+                print(f"Arquivo '{nome_arquivo}' baixado para {caminho_download}")
+                return caminho_download
+            except Exception:
+                pass
+    print("Arquivo não encontrado em nenhum servidor.")
+    return None
 
 # Função para apagar arquivo
-def apagar_arquivo(ftp, nome_arquivo):
-    """Apaga um arquivo do servidor FTP."""
-    if ftp is None:
-        enviar_erro("Conexão FTP não estabelecida.")
-        return
-    try:
-        # Verifica se o arquivo existe antes de tentar apagar
-        arquivos = ftp.nlst()
-        if nome_arquivo not in arquivos:
-            raise FileNotFoundError(f"O arquivo '{nome_arquivo}' não existe no servidor FTP.")
-        
-        ftp.delete(nome_arquivo)
-        print(f"Arquivo '{nome_arquivo}' apagado com sucesso do servidor FTP.")
-    except FileNotFoundError as e:
-        enviar_erro(f"Arquivo não encontrado para apagar: {e}", ftp)  # Envia erro específico para Discord
-    except PermissionError as e:
-        enviar_erro(f"Permissão negada para apagar o arquivo: {e}", ftp)  # Envia erro de permissão para Discord
-    except error_perm as e:
-        enviar_erro(f"Erro de permissão no FTP: {e}", ftp)  # Erro de permissão no servidor FTP
-    except Exception as e:
-        enviar_erro(e)  # Apenas no console
+def apagar_arquivo(nome_arquivo):
+    for ftp in conexoes_ftp.values():
+        if ftp:
+            try:
+                ftp.delete(nome_arquivo)
+                print(f"Arquivo '{nome_arquivo}' apagado com sucesso.")
+                return True
+            except Exception:
+                pass
+    print("Erro ao apagar arquivo ou arquivo não encontrado.")
+    return False
 
-# Configurações do bot do Discord
+# Configuração do bot do Discord
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -144,99 +109,70 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'Bot conectado como {bot.user}')
 
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        await ctx.send("Comando não encontrado. Use `!menu` para ver a lista de comandos disponíveis.")
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(f"**Erro de Argumento**: Você esqueceu de passar algum argumento. Use `!menu` para ver os comandos corretamente.")
-    else:
-        await enviar_erro(f"Ocorreu um erro: {error}", ctx)
-
-# Comandos do bot para o Discord
 @bot.command(name='listar')
 async def listar(ctx):
-    if ctx.guild:
-        try:
-            arquivos = listar_arquivos_servidor(ftp)
-            response = "\n".join(arquivos) if arquivos else "Nenhum arquivo encontrado no servidor FTP."
-            await ctx.send(response)
-        except Exception as e:
-            await enviar_erro(f"Erro ao listar arquivos: {e}", ctx)
+    arquivos = listar_todos_os_arquivos()
+    response = "\n".join(arquivos) if arquivos else "Nenhum arquivo encontrado nos servidores FTP."
+    await ctx.send(response)
 
 @bot.command(name='upload')
 async def upload(ctx):
-    if ctx.guild:
-        if ctx.message.attachments:
-            try:
-                for attachment in ctx.message.attachments:
-                    file_path = f"./{attachment.filename}"
-                    await attachment.save(file_path)
-                    upload_arquivo(ftp, file_path)
-                    os.remove(file_path)
-                    await ctx.send(f"Arquivo '{attachment.filename}' enviado ao servidor FTP.")
-            except Exception as e:
-                await enviar_erro(f"Erro ao enviar o arquivo: {e}", ctx)
-        else:
-            await ctx.send("Por favor, anexe um arquivo para fazer o upload.")
+    if ctx.message.attachments:
+        for attachment in ctx.message.attachments:
+            file_path = f"./{attachment.filename}"
+            await attachment.save(file_path)
+            ftp = escolher_melhor_servidor()
+            if ftp:
+                upload_arquivo(ftp, file_path)
+                os.remove(file_path)
+                await ctx.send(f"Arquivo '{attachment.filename}' enviado para o servidor FTP.")
+            else:
+                await ctx.send("Nenhum servidor disponível para upload.")
+    else:
+        await ctx.send("Por favor, anexe um arquivo para fazer o upload.")
 
 @bot.command(name='download')
 async def download(ctx, nome_arquivo: str):
-    if ctx.guild:
-        try:
-            arquivos = ftp.nlst()
-            if nome_arquivo not in arquivos:
-                await ctx.send("**Erro**: Arquivo nao encontrado no servidor FTP.")
-                return
-            caminho_destino = download_arquivo(ftp, nome_arquivo)
-            if caminho_destino:
-                await ctx.send(file=discord.File(caminho_destino))
-                await ctx.send(f"Arquivo '{nome_arquivo}' baixado com sucesso.")
-                os.remove(caminho_destino)
-            else:
-                await ctx.send(f"Erro ao baixar o arquivo '{nome_arquivo}'.")
-        except Exception as e:
-            await enviar_erro(f"Erro ao baixar o arquivo: {e}", ctx)
+    caminho = download_arquivo(nome_arquivo)
+    if caminho:
+        await ctx.send(file=discord.File(caminho))
+        os.remove(caminho)
+    else:
+        await ctx.send("Arquivo não encontrado nos servidores FTP.")
 
 @bot.command(name='apagar')
-async def apagar(ctx, nome_arquivo: str = None):
-    """Função para apagar arquivos no servidor FTP com verificação de erro para argumento ausente."""
-    if ctx.guild:
-        if nome_arquivo is None:
-            await ctx.send("**Erro**: Você precisa fornecer o nome do arquivo que deseja apagar.")
-            return
-        arquivos = ftp.nlst()
-        if nome_arquivo not in arquivos:
-            await ctx.send("**Erro**: Arquivo nao encontrado no servidor FTP.")
-            return
-        try:
-            apagar_arquivo(ftp, nome_arquivo)
-            await ctx.send(f"Arquivo '{nome_arquivo}' apagado com sucesso.")
-        except Exception as e:
-            await enviar_erro(f"Erro ao apagar o arquivo: {e}", ctx)
+async def apagar(ctx, nome_arquivo: str):
+    if apagar_arquivo(nome_arquivo):
+        await ctx.send(f"Arquivo '{nome_arquivo}' apagado com sucesso.")
+    else:
+        await ctx.send("Erro ao apagar o arquivo ou arquivo não encontrado.")
 
 @bot.command(name='desconectar')
 async def desconectar(ctx):
-    global ftp
-    if ftp:
-        try:
-            ftp.quit()
-            ftp = None
-            await ctx.send("Conexão com o servidor FTP encerrada.")
-        except Exception as e:
-            await enviar_erro(f"Erro ao desconectar do servidor FTP: {e}", ctx)
-    else:
-        await ctx.send("O bot não está conectado ao servidor FTP.")
+    global conexoes_ftp
+    for ftp in conexoes_ftp.values():
+        if ftp:
+            try:
+                ftp.quit()
+            except Exception:
+                pass
+    conexoes_ftp = {}
+    await ctx.send("Conexão com os servidores FTP encerrada.")
+
+@bot.command(name='reconectar')
+async def reconectar(ctx):
+    reconectar_servidores()
+    await ctx.send("Servidores FTP reconectados.")
 
 @bot.command(name='menu')
 async def menu(ctx):
-    """Mostra todas as opções de comando e o que elas fazem."""
     comandos = (
-        "`!listar` - Lista arquivos e diretórios no servidor FTP.",
-        "`!upload` - Faz o upload de um arquivo anexado para o servidor FTP.",
-        "`!download` <nome_arquivo> - Baixa um arquivo do servidor FTP.",
-        "`!apagar` <nome_arquivo> - Apaga um arquivo do servidor FTP.",
-        "`!desconectar` - Desconecta o bot do servidor FTP.",
+        "`!listar` - Lista arquivos dos servidores FTP.",
+        "`!upload` - Envia um arquivo anexado para o FTP.",
+        "`!download <nome_arquivo>` - Baixa um arquivo do FTP.",
+        "`!apagar <nome_arquivo>` - Apaga um arquivo do FTP.",
+        "`!desconectar` - Encerra conexão com os servidores FTP.",
+        "`!reconectar` - Tenta reconectar servidores FTP offline.",
     )
     await ctx.send("\n".join(comandos))
 
