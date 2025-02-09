@@ -30,7 +30,7 @@ Inicialmente, o sistema utiliza o Hamachi para criar uma rede virtual privada, u
  - **os**: Biblioteca padrão do Python usada para manipulação de arquivos e diretórios.
  - **discord.py**: Biblioteca utilizada para criar o bot do Discord que interage com os servidores FTP.
  - **pyftpdlib**: Biblioteca usada para criar e gerenciar servidores FTP locais.
- - **Sistema de Balanceamento de Carga**: Implementado no código para distribuir uploads entre servidores FTP disponíveis, escolhendo o menos carregado.
+ - **HaProxy - Sistema de Balanceamento de Carga**: Implementado no código para distribuir uploads entre servidores FTP disponíveis, escolhendo o menos carregado.
  - **Gerenciamento de Conexões FTP**: Código implementa reconexão automática e listagem de arquivos de múltiplos servidores.
  - **Automação com Bot do Discord**: Comandos como !upload, !download, !listar e !apagar permitem interação direta pelo Discord.
 
