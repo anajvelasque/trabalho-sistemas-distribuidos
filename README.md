@@ -48,10 +48,22 @@ Inicialmente, o sistema utiliza o Hamachi para criar uma rede virtual privada, u
 
 - `cliente.py`: Implementação do cliente FTP, responsável por interagir com o servidor.
 - `servidor_ftp.py`: Implementação do servidor FTP, que gerencia as operações de upload, download e listagem de arquivos.
-- 
 - `README.md`: Este documento, que descreve o projeto.
 
 ---
+
+
+## Requisitos 
+
+**Antes de iniciar, certifique-se de ter os seguintes componentes:** 
+
+ - Hamachi (para criar uma rede privada virtual entre as máquinas) 
+
+ - HaProxy (para balanceamento de carga, necessário Linux ou WSL no Windows) 
+
+ - Python 3.8 ou superior
+   
+ - Conta no Discord e acesso a ao servidor do Discord 
 
 ## Como Executar o Projeto
 
@@ -80,7 +92,7 @@ Inicialmente, o sistema utiliza o Hamachi para criar uma rede virtual privada, u
    python cliente.py
    ```
 
-6. Utilize o cliente para realizar as operações de upload, download e listagem de arquivos.
+6. Utilize o cliente para realizar as operações de upload, download, exclusão e listagem de arquivos.
 
 ---
 
