@@ -187,14 +187,15 @@ Cada máquina que atuará como servidor FTP deve seguir os passos:
 
 1. Editar o código do servidor FTP (servidor_ftp.py): 
 
-  a. Altere o diretório onde os arquivos serão armazenados: caminho_diretorio = r'C:\\Users\\SEU_USUARIO\\Downloads\\ftp_sd'
+    a. Altere o diretório onde os arquivos serão armazenados: caminho_diretorio = r'C:\\Users\\SEU_USUARIO\\Downloads\\ftp_sd'
 
-  b. Atualize as credenciais e o IP do servidor para o IP respectivo de cada máquina que vai executar o código:  
+    b. Atualize as credenciais e o IP do servidor para o IP respectivo de cada máquina que vai executar o código:  
 ````
 authorizer.add_user('usuario1', 'senha1', caminho_diretorio, perm='elradfmwMT') 
 ````
 
-  c. Atualize o IP do servidor em cada máquina também no trecho: 
+   c. Atualize o IP do servidor em cada máquina também no trecho: 
+   
 ````
    # Define o IP e a porta do servidor FTP 
 
@@ -244,23 +245,23 @@ sudo systemctl start haproxy
 ````
 2. Rodar os servidores FTP nas máquinas responsáveis, cada um em um terminal separado: 
 
-  a. No terminal, execute o comando: 
+   a. No terminal, execute o comando: 
 
 python servidor_ftp.py 
 
-  b. Se a execução for bem-sucedida, uma mensagem de confirmação de conexão será exibida. 
+   b. Se a execução for bem-sucedida, uma mensagem de confirmação de conexão será exibida. 
 
 3. Executar o Bot do Discord somente na máquina que está executando o HaProxy 
 
-  a. Em outro terminal, execute: 
+   a. Em outro terminal, execute: 
 ````
 python cliente.py 
 ````
- b. Após a mensagem de conexão bem-sucedida, o bot estará online. 
+   b. Após a mensagem de conexão bem-sucedida, o bot estará online. 
 
 4. Acessar o Servidor Discord e Utilizar os Comandos 
 
-  a. Entre no servidor do Discord através do seguinte link: https://discord.gg/yrDtdGTn 
+   a. Entre no servidor do Discord através do seguinte link: https://discord.gg/yrDtdGTn 
 
 5. Utilize os seguintes comandos no chat para interagir com o servidor FTP: 
 
