@@ -265,17 +265,17 @@ python cliente.py
 
 5. Utilize os seguintes comandos no chat para interagir com o servidor FTP: 
 
-  - a. !menu - Exibe o menu de comandos disponíveis. 
+  - a. `!menu` - Exibe o menu de comandos disponíveis. 
 
-  - b. !listar - Lista os arquivos armazenados no servidor FTP. 
+  - b. `!listar` - Lista os arquivos armazenados no servidor FTP. 
 
-  - c. !upload - Envie um arquivo anexado para armazená-lo no servidor FTP. 
+  - c. `!upload` - Envie um arquivo anexado para armazená-lo no servidor FTP. 
 
-  - d. !download <nome_arquivo> - Baixa um arquivo específico do servidor FTP. 
+  - d. `!download <nome_arquivo>` - Baixa um arquivo específico do servidor FTP. 
 
-  - e. !apagar <nome_arquivo> - Remove um arquivo do servidor FTP. 
+  - e. `!apagar <nome_arquivo>` - Remove um arquivo do servidor FTP. 
 
-  - f. !desconectar - Finaliza a conexão do bot com o servidor FTP. 
+  - f. `!desconectar` - Finaliza a conexão do bot com o servidor FTP. 
 
 ---
 
