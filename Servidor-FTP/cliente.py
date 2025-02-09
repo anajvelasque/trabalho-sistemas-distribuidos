@@ -178,5 +178,5 @@ async def menu(ctx):
 
 # Inicia o bot do Discord
 if __name__ == "__main__":
-    TOKEN = 'MTMzMzQ4NDQzMDM1ODIxNjc2NQ.GH_t8e.ACo9vRkdLV7rajsRwwDEZy31HjHqDv3MVjU6O8'
+    TOKEN = 'ADD_TOKEN_HERE'
     bot.run(TOKEN)
