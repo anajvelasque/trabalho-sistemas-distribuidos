@@ -154,6 +154,9 @@ servidores_ftp = [
 ] 
 ```
 
+Substituir TOKEN = 'ADD_TOKEN_HERE' no código.
+Atenção: essa informação não pode ser publicada no GitHub, conforme as diretrizes do Discord. Por isso, o token está disponível apenas no relatório do trabalho.
+
 ## Configuração do Servidor FTP 
 
 Cada máquina que atuará como servidor FTP deve seguir os passos: 
