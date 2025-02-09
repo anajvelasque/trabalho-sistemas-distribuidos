@@ -143,33 +143,6 @@ sudo service haproxy status
 
 Aqui pode-se perceber que primeiro ele inicialmente não conseguiu conectar (DOWN) mas após um tempo ele consegue (UP) significando que ele conseguiu conectar nas duas redes do Hamachi. 
 
-## Como Executar o Projeto
-
-1. Clone este repositório para sua máquina local:
-   ```bash
-   git clone <url-do-repositorio>
-   ```
-
-2. Navegue até o diretório do projeto:
-   ```bash
-   cd <nome-do-diretorio>
-   ```
-3. Instale essas bibliotecas se necessário:
-   ```bash
-   pip install discord.py pyftpdlib
-   ou
-   python3 -m pip install discord.py pyftpdlib
-   ```
-4. Inicie o servidor FTP:
-   ```bash
-   python servidor_ftp.py
-   ```
-
-5. Em outro terminal, inicie o cliente FTP:
-   ```bash
-   python cliente.py
-   ```
-
 ## Configuração do Cliente 
 
 No computador com HaProxy, edite cliente.py e configure os IPs dos servidores trocando as linhas abaixo pelos IPs correspondentes aos das máquinas que irão participar da rede e com respectivos usuário e senha desejados: 
@@ -235,7 +208,34 @@ servidor.serve_forever()
 
 if name == "main": iniciar_servidor_ftp() 
 
-```` 
+````
+
+## Como Executar o Projeto
+
+1. Clone este repositório para sua máquina local:
+   ```bash
+   git clone <url-do-repositorio>
+   ```
+
+2. Navegue até o diretório do projeto:
+   ```bash
+   cd <nome-do-diretorio>
+   ```
+3. Instale essas bibliotecas se necessário:
+   ```bash
+   pip install discord.py pyftpdlib
+   ou
+   python3 -m pip install discord.py pyftpdlib
+   ```
+4. Inicie o servidor FTP em todas as máquinas:
+   ```bash
+   python servidor_ftp.py
+   ```
+
+5. Em outro terminal, inicie o cliente FTP apenas na máquina que roda o HaProxy:
+   ```bash
+   python cliente.py
+   ```
 
 ## Execução do Projeto 
 
